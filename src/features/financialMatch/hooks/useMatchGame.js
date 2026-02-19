@@ -208,91 +208,32 @@ export function useMatchGame() {
         dispatch({ type: A.START_GAME });
     }, []);
 
-    // ── Cell Tap Logic ──────────────────────────────────────────────
-    const handleCellTap = useCallback(
-        (row, col) => {
-            if (state.isProcessing || state.gameStatus !== GAME_PHASES.PLAYING) return;
+    const showPraise = useCallback(() => {
+        const msg = PRAISE_MESSAGES[Math.floor(Math.random() * PRAISE_MESSAGES.length)];
+        speakPraise(msg);
+        dispatch({ type: A.SHOW_PRAISE, payload: msg });
 
-            const { selectedCell, grid } = state;
+        if (praiseTimeoutRef.current) clearTimeout(praiseTimeoutRef.current);
+        praiseTimeoutRef.current = setTimeout(() => {
+            dispatch({ type: A.HIDE_PRAISE });
+        }, 1500);
+    }, [speakPraise]);
 
-            if (!selectedCell) {
-                dispatch({ type: A.SELECT_CELL, payload: { row, col } });
-                return;
-            }
-
-            if (selectedCell.row === row && selectedCell.col === col) {
-                dispatch({ type: A.DESELECT });
-                return;
-            }
-
-            // Check adjacency
-            const { row: r1, col: c1 } = selectedCell;
-            const r2 = row;
-            const c2 = col;
-            const isAdjacent = (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
-
-            if (!isAdjacent) {
-                dispatch({ type: A.SELECT_CELL, payload: { row, col } });
-                return;
-            }
-
-            const isValid = wouldCreateMatch(grid, r1, c1, r2, c2);
-
-            if (!isValid) {
-                dispatch({ type: A.APPLY_INVALID_SWAP });
-                return;
-            }
-
-            // Valid Swap
-            playSound('swap');
-            dispatch({ type: A.SET_PROCESSING, payload: true });
-
-            const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
-            const a = { ...newGrid[r1][c1] };
-            const b = { ...newGrid[r2][c2] };
-            newGrid[r1][c1] = { ...b, row: r1, col: c1 };
-            newGrid[r2][c2] = { ...a, row: r2, col: c2 };
-
-            resolveChain(newGrid);
-        },
-        [state.isProcessing, state.gameStatus, state.selectedCell, state.grid] // eslint-disable-line react-hooks/exhaustive-deps
-    );
-
-    // ── Drag Swap Logic (New) ───────────────────────────────────────
-    const handleDragSwap = useCallback(
-        (r1, c1, r2, c2) => {
-            if (state.isProcessing || state.gameStatus !== GAME_PHASES.PLAYING) return;
-            
-            // Validate adjacency logic again (just in case)
-            const isAdjacent = (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
-            if (!isAdjacent) return;
-
-            const grid = state.grid;
-            const isValid = wouldCreateMatch(grid, r1, c1, r2, c2);
-
-            if (!isValid) {
-                // Determine if we should show invalid feedback? 
-                // For drag, maybe just animate back. 
-                // But the game logic expects an action.
-                dispatch({ type: A.APPLY_INVALID_SWAP });
-                return;
-            }
-
-            // Valid Swap
-            playSound('swap');
-            dispatch({ type: A.SET_PROCESSING, payload: true });
-            dispatch({ type: A.DESELECT }); // Clear any existing selection
-
-            const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
-            const a = { ...newGrid[r1][c1] };
-            const b = { ...newGrid[r2][c2] };
-            newGrid[r1][c1] = { ...b, row: r1, col: c1 };
-            newGrid[r2][c2] = { ...a, row: r2, col: c2 };
-
-            resolveChain(newGrid);
-        },
-        [state.isProcessing, state.gameStatus, state.grid, resolveChain]
-    );
+    const addFloat = useCallback((value, tileType) => {
+        const id = nextFloatId();
+        dispatch({
+            type: A.ADD_FLOAT,
+            payload: {
+                id,
+                value,
+                x: 40 + Math.random() * 20,
+                y: 40 + Math.random() * 20,
+            },
+        });
+        setTimeout(() => {
+            dispatch({ type: A.REMOVE_FLOAT, payload: id });
+        }, 800);
+    }, []);
 
     // ── Chain Resolution (Async) ────────────────────────────────────
     const resolveChain = useCallback(
@@ -352,35 +293,96 @@ export function useMatchGame() {
                 showPraise();
             }
         },
-        [] // eslint-disable-line react-hooks/exhaustive-deps
+        [addFloat, showPraise]
     );
 
-    const showPraise = useCallback(() => {
-        const msg = PRAISE_MESSAGES[Math.floor(Math.random() * PRAISE_MESSAGES.length)];
-        speakPraise(msg);
-        dispatch({ type: A.SHOW_PRAISE, payload: msg });
+    // ── Cell Tap Logic ──────────────────────────────────────────────
+    const handleCellTap = useCallback(
+        (row, col) => {
+            if (state.isProcessing || state.gameStatus !== GAME_PHASES.PLAYING) return;
 
-        if (praiseTimeoutRef.current) clearTimeout(praiseTimeoutRef.current);
-        praiseTimeoutRef.current = setTimeout(() => {
-            dispatch({ type: A.HIDE_PRAISE });
-        }, 1500);
-    }, []);
+            const { selectedCell, grid } = state;
 
-    const addFloat = useCallback((value, tileType) => {
-        const id = nextFloatId();
-        dispatch({
-            type: A.ADD_FLOAT,
-            payload: {
-                id,
-                value,
-                x: 40 + Math.random() * 20,
-                y: 40 + Math.random() * 20,
-            },
-        });
-        setTimeout(() => {
-            dispatch({ type: A.REMOVE_FLOAT, payload: id });
-        }, 800);
-    }, []);
+            if (!selectedCell) {
+                dispatch({ type: A.SELECT_CELL, payload: { row, col } });
+                return;
+            }
+
+            if (selectedCell.row === row && selectedCell.col === col) {
+                dispatch({ type: A.DESELECT });
+                return;
+            }
+
+            // Check adjacency
+            const { row: r1, col: c1 } = selectedCell;
+            const r2 = row;
+            const c2 = col;
+            const isAdjacent = (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
+
+            if (!isAdjacent) {
+                dispatch({ type: A.SELECT_CELL, payload: { row, col } });
+                return;
+            }
+
+            const isValid = wouldCreateMatch(grid, r1, c1, r2, c2);
+
+            if (!isValid) {
+                dispatch({ type: A.APPLY_INVALID_SWAP });
+                return;
+            }
+
+            // Valid Swap
+            playSound('swap');
+            dispatch({ type: A.SET_PROCESSING, payload: true });
+
+            const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
+            const a = { ...newGrid[r1][c1] };
+            const b = { ...newGrid[r2][c2] };
+            newGrid[r1][c1] = { ...b, row: r1, col: c1 };
+            newGrid[r2][c2] = { ...a, row: r2, col: c2 };
+
+            resolveChain(newGrid);
+        },
+        [state.isProcessing, state.gameStatus, state.selectedCell, state.grid] // eslint-disable-line react-hooks/exhaustive-deps
+    );
+
+    // ── Drag Swap Logic (New) ───────────────────────────────────────
+    const handleDragSwap = useCallback(
+        (r1, c1, r2, c2) => {
+            if (state.isProcessing || state.gameStatus !== GAME_PHASES.PLAYING) return;
+
+            // Validate adjacency logic again (just in case)
+            const isAdjacent = (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
+            if (!isAdjacent) return;
+
+            const grid = state.grid;
+            const isValid = wouldCreateMatch(grid, r1, c1, r2, c2);
+
+            if (!isValid) {
+                // Determine if we should show invalid feedback? 
+                // For drag, maybe just animate back. 
+                // But the game logic expects an action.
+                dispatch({ type: A.APPLY_INVALID_SWAP });
+                return;
+            }
+
+            // Valid Swap
+            playSound('swap');
+            dispatch({ type: A.SET_PROCESSING, payload: true });
+            dispatch({ type: A.DESELECT }); // Clear any existing selection
+
+            const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
+            const a = { ...newGrid[r1][c1] };
+            const b = { ...newGrid[r2][c2] };
+            newGrid[r1][c1] = { ...b, row: r1, col: c1 };
+            newGrid[r2][c2] = { ...a, row: r2, col: c2 };
+
+            resolveChain(newGrid);
+        },
+        [state.isProcessing, state.gameStatus, state.grid, resolveChain]
+    );
+
+
 
     // Public Actions
     const exitGame = useCallback(() => {
