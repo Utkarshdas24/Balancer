@@ -205,7 +205,17 @@ export function useMatchGame() {
     }, []);
 
     const startGame = useCallback(() => {
-        dispatch({ type: A.START_GAME });
+        const hasSeenTutorial = localStorage.getItem('bb_tutorial_completed');
+        if (hasSeenTutorial === 'true') {
+            dispatch({ type: A.START_GAME });
+        } else {
+            dispatch({ type: A.START_GAME }); // Start initializes grid
+            // Then immediately switch to tutorial phase
+            // Ideally we'd pass payload to START_GAME but let's just dispatch second action for simplicity
+            // or modify START_GAME to handle it. 
+            // Better: Dispatch START_GAME, then dispatch SHOW_TUTORIAL if needed.
+            dispatch({ type: A.SHOW_TUTORIAL });
+        }
     }, []);
 
     const showPraise = useCallback(() => {
@@ -349,7 +359,10 @@ export function useMatchGame() {
     // ── Drag Swap Logic (New) ───────────────────────────────────────
     const handleDragSwap = useCallback(
         (r1, c1, r2, c2) => {
-            if (state.isProcessing || state.gameStatus !== GAME_PHASES.PLAYING) return;
+            const isPlaying = state.gameStatus === GAME_PHASES.PLAYING;
+            const isTutorial = state.gameStatus === GAME_PHASES.TUTORIAL;
+
+            if (state.isProcessing || (!isPlaying && !isTutorial)) return;
 
             // Validate adjacency logic again (just in case)
             const isAdjacent = (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
@@ -368,6 +381,13 @@ export function useMatchGame() {
 
             // Valid Swap
             playSound('swap');
+
+            // If in Tutorial, complete it now
+            if (isTutorial) {
+                localStorage.setItem('bb_tutorial_completed', 'true');
+                dispatch({ type: A.COMPLETE_TUTORIAL });
+            }
+
             dispatch({ type: A.SET_PROCESSING, payload: true });
             dispatch({ type: A.DESELECT }); // Clear any existing selection
 

@@ -24,6 +24,8 @@ export const A = {
     FINISH_GAME: 'FINISH_GAME',
     SHOW_RESULT: 'SHOW_RESULT',
     SHOW_THANK_YOU: 'SHOW_THANK_YOU',
+    SHOW_TUTORIAL: 'SHOW_TUTORIAL',
+    COMPLETE_TUTORIAL: 'COMPLETE_TUTORIAL',
     EXIT_GAME: 'EXIT_GAME',
     RESTART_GAME: 'RESTART_GAME',
 
@@ -47,6 +49,7 @@ export const A = {
 export const initialState = {
     entryDetails: null,
     gameStatus: GAME_PHASES.LANDING,
+    tutorialActive: false,
     timeLeft: 120,
 
     grid: null,
@@ -140,6 +143,20 @@ export function gameReducer(state, action) {
 
         case A.SHOW_THANK_YOU:
             return { ...state, gameStatus: GAME_PHASES.THANK_YOU };
+
+        case A.SHOW_TUTORIAL:
+            return {
+                ...state,
+                gameStatus: GAME_PHASES.TUTORIAL,
+                isProcessing: false,
+            };
+
+        case A.COMPLETE_TUTORIAL:
+            return {
+                ...state,
+                gameStatus: GAME_PHASES.PLAYING,
+                tutorialActive: false,
+            };
 
         case A.EXIT_GAME:
             return {

@@ -14,6 +14,7 @@ import BucketBar from './components/BucketBar.jsx';
 import ResultScreen from './components/ResultScreen.jsx';
 import ThankYou from './components/ThankYou.jsx';
 import Background from './components/Background.jsx';
+import TutorialHand from './components/TutorialHand.jsx';
 
 import { useMatchGame } from './hooks/useMatchGame.js';
 import { GAME_PHASES } from './config/gameConfig.js';
@@ -96,7 +97,7 @@ const BalanceBuilderPage = memo(function BalanceBuilderPage() {
         }
 
         // If Game Restarts, Restart BGM & Stop Completion Audio
-        if (gameStatus === GAME_PHASES.LANDING || gameStatus === GAME_PHASES.ENTRY || gameStatus === GAME_PHASES.PLAYING) {
+        if (gameStatus === GAME_PHASES.LANDING || gameStatus === GAME_PHASES.ENTRY || gameStatus === GAME_PHASES.PLAYING || gameStatus === GAME_PHASES.TUTORIAL) {
 
             // Stop completion audio if playing
             if (completionAudioRef.current) {
@@ -199,7 +200,8 @@ const BalanceBuilderPage = memo(function BalanceBuilderPage() {
                 )}
 
                 {/* ── PLAYING ── */}
-                {gameStatus === GAME_PHASES.PLAYING && (
+                {/* ── PLAYING / TUTORIAL ── */}
+                {(gameStatus === GAME_PHASES.PLAYING || gameStatus === GAME_PHASES.TUTORIAL) && (
                     <motion.div
                         key="playing"
                         variants={pageVariants}
@@ -208,6 +210,8 @@ const BalanceBuilderPage = memo(function BalanceBuilderPage() {
                         exit="exit"
                         className="flex-1 w-full flex flex-col items-center justify-between pb-4 relative z-10"
                     >
+                        {gameStatus === GAME_PHASES.TUTORIAL && <TutorialHand />}
+
                         <GameHUD
                             timeLeft={timeLeft}
                             onExit={exitGame}

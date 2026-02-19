@@ -84,6 +84,7 @@ export const GAME_PHASES = {
     RESULT: 'result',
     THANK_YOU: 'thank_you',
     EXITED: 'exited',
+    TUTORIAL: 'tutorial',
 };
 
 // ── Score Calculation ──────────────────────────────────────────────────
