@@ -35,6 +35,7 @@ const BalanceBuilderPage = memo(function BalanceBuilderPage() {
         handleEntrySubmit,
         startGame,
         handleCellTap,
+        handleDragSwap,
         exitGame,
         restartGame,
         showThankYou,
@@ -147,7 +148,7 @@ const BalanceBuilderPage = memo(function BalanceBuilderPage() {
             <audio ref={audioRef} src={bgmUrl} loop />
             <audio ref={completionAudioRef} src={completionUrl} />
 
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
 
                 {/* ── LANDING (with popup overlay) ── */}
                 {gameStatus === GAME_PHASES.LANDING && (
@@ -220,6 +221,7 @@ const BalanceBuilderPage = memo(function BalanceBuilderPage() {
                                 floatingScores={floatingScores}
                                 activePraise={activePraise}
                                 onCellTap={handleCellTap}
+                                onSwap={handleDragSwap}
                             />
                         </div>
 
@@ -259,7 +261,7 @@ const BalanceBuilderPage = memo(function BalanceBuilderPage() {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className="flex-1 w-full relative z-10"
+                        className="fixed inset-0 z-[2000] bg-[#003366] w-full h-full"
                     >
                         <ThankYou
                             userName={entryDetails?.name}

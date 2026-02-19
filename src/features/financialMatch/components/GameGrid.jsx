@@ -14,6 +14,7 @@ const GameGrid = memo(function GameGrid({
     floatingScores,
     activePraise,
     onCellTap,
+    onSwap,
 }) {
     const containerRef = useRef(null);
     const [cellSize, setCellSize] = useState(48);
@@ -36,6 +37,28 @@ const GameGrid = memo(function GameGrid({
     const handleTap = useCallback(
         (row, col) => onCellTap(row, col),
         [onCellTap]
+    );
+
+    const handleSwipe = useCallback(
+        (row, col, direction) => {
+            let targetRow = row;
+            let targetCol = col;
+            if (direction === 'LEFT') targetCol--;
+            else if (direction === 'RIGHT') targetCol++;
+            else if (direction === 'UP') targetRow--;
+            else if (direction === 'DOWN') targetRow++;
+
+            // Validate bounds
+            if (
+                targetRow >= 0 && targetRow < GRID_SIZE &&
+                targetCol >= 0 && targetCol < GRID_SIZE
+            ) {
+                if (onSwap) {
+                    onSwap(row, col, targetRow, targetCol);
+                }
+            }
+        },
+        [onSwap]
     );
 
     if (!grid) return null;
@@ -82,6 +105,7 @@ const GameGrid = memo(function GameGrid({
                                     isSelected={isSelected}
                                     isExploding={isExploding}
                                     onTap={handleTap}
+                                    onSwipe={handleSwipe}
                                     cellSize={cellSize}
                                 />
                             );
@@ -156,6 +180,7 @@ GameGrid.propTypes = {
     floatingScores: PropTypes.array.isRequired,
     activePraise: PropTypes.string,
     onCellTap: PropTypes.func.isRequired,
+    onSwap: PropTypes.func,
 };
 
 export default GameGrid;

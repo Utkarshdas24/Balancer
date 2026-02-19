@@ -258,6 +258,42 @@ export function useMatchGame() {
         [state.isProcessing, state.gameStatus, state.selectedCell, state.grid] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
+    // ── Drag Swap Logic (New) ───────────────────────────────────────
+    const handleDragSwap = useCallback(
+        (r1, c1, r2, c2) => {
+            if (state.isProcessing || state.gameStatus !== GAME_PHASES.PLAYING) return;
+            
+            // Validate adjacency logic again (just in case)
+            const isAdjacent = (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
+            if (!isAdjacent) return;
+
+            const grid = state.grid;
+            const isValid = wouldCreateMatch(grid, r1, c1, r2, c2);
+
+            if (!isValid) {
+                // Determine if we should show invalid feedback? 
+                // For drag, maybe just animate back. 
+                // But the game logic expects an action.
+                dispatch({ type: A.APPLY_INVALID_SWAP });
+                return;
+            }
+
+            // Valid Swap
+            playSound('swap');
+            dispatch({ type: A.SET_PROCESSING, payload: true });
+            dispatch({ type: A.DESELECT }); // Clear any existing selection
+
+            const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
+            const a = { ...newGrid[r1][c1] };
+            const b = { ...newGrid[r2][c2] };
+            newGrid[r1][c1] = { ...b, row: r1, col: c1 };
+            newGrid[r2][c2] = { ...a, row: r2, col: c2 };
+
+            resolveChain(newGrid);
+        },
+        [state.isProcessing, state.gameStatus, state.grid, resolveChain]
+    );
+
     // ── Chain Resolution (Async) ────────────────────────────────────
     const resolveChain = useCallback(
         async (swappedGrid) => {
@@ -388,6 +424,7 @@ export function useMatchGame() {
         handleEntrySubmit,
         startGame,
         handleCellTap,
+        handleDragSwap,
         exitGame,
         restartGame,
         showThankYou,

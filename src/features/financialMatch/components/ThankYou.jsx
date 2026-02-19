@@ -6,12 +6,13 @@ import Confetti from './Confetti';
 
 const ThankYou = ({ onRestart, userName }) => {
     // Styling from ScoreResultsScreen framework
-    const ghibliCardClass = "relative w-full min-h-[100dvh] flex flex-col overflow-hidden max-w-[600px] mx-auto text-sans";
+    const ghibliCardClass = "fixed inset-0 w-full h-full flex flex-col overflow-hidden max-w-[600px] mx-auto text-sans z-[2000]";
     const ghibliContentClass = "relative z-50 w-full h-full flex flex-col py-8 px-4 sm:px-8 overflow-y-auto custom-scrollbar justify-center items-center";
 
     return (
         <div className={ghibliCardClass} style={{
-            background: "linear-gradient(180deg, #00509E 0%, #003366 100%)" // Deep Blue Game Theme
+            background: "linear-gradient(180deg, #00509E 0%, #003366 100%)", // Deep Blue Game Theme
+            zIndex: 2000
         }}>
             <Confetti />
 
