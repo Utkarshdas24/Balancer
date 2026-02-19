@@ -6,49 +6,50 @@ import { Hand } from 'lucide-react';
 
 const TutorialHand = () => {
     return (
-        <div className="absolute inset-0 pointer-events-none z-[200] flex items-center justify-center">
-            {/* Dark Overlay */}
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+        <div className="absolute inset-0 pointer-events-none z-[200] flex flex-col items-center justify-center">
+            {/* Subtle Overlay to highlight text/hand, but keep grid visible */}
+            <div className="absolute inset-0 bg-black/40" />
 
             {/* Instruction Text */}
             <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute top-[20%] w-full text-center px-6"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative z-10 text-center mb-8 px-4"
             >
-                <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider drop-shadow-[0_4px_0_rgba(0,0,0,0.5)] mb-2">
+                <h2 className="text-3xl font-black text-white uppercase tracking-wider drop-shadow-lg mb-2">
                     How to Play
                 </h2>
-                <p className="text-base sm:text-lg text-blue-100 font-bold bg-black/40 inline-block px-4 py-2 rounded-full border border-white/20">
-                    Swap tiles to make a match!
-                </p>
+                <div className="bg-bb-blue/80 backdrop-blur-md px-6 py-2 rounded-full border border-white/30 shadow-xl inline-block">
+                    <p className="text-lg text-white font-bold">
+                        Swap tiles to make a match!
+                    </p>
+                </div>
             </motion.div>
 
             {/* Hand Animation */}
-            <div className="relative w-64 h-64 flex items-center justify-center">
-                {/* Reference Grid Highlight (Mock) */}
-                <div className="absolute flex gap-1">
-                    <div className="w-12 h-12 border-2 border-white/50 rounded-xl bg-white/10" />
-                    <div className="w-12 h-12 border-2 border-dashed border-bb-gold rounded-xl bg-bb-gold/20 animate-pulse" />
-                </div>
-
+            <div className="relative z-10 w-32 h-32 flex items-center justify-center">
                 <motion.div
-                    initial={{ x: -25, y: 25, opacity: 0 }}
+                    initial={{ x: -30, y: 10, opacity: 0 }}
                     animate={{
-                        x: [-25, 25, -25], // Move right then back
-                        y: [25, 25, 25],
+                        x: [-30, 30, -30], // Horizontal Swipe Gesture
+                        y: [10, 10, 10],   // Stay relatively level
                         opacity: [0, 1, 1, 0]
                     }}
                     transition={{
-                        duration: 2,
+                        duration: 1.8,
                         repeat: Infinity,
                         ease: "easeInOut",
-                        repeatDelay: 0.5
+                        repeatDelay: 0.2
                     }}
-                    className="absolute z-10 text-white drop-shadow-xl"
+                    className="drop-shadow-2xl filter"
                 >
-                    <Hand size={48} className="fill-white/20 -rotate-12" strokeWidth={2} />
+                    <Hand size={64} className="fill-white text-bb-navy" strokeWidth={1.5} />
                 </motion.div>
+
+                {/* Optional: Simple dashed line to indicate path */}
+                <svg className="absolute w-20 h-2 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-30">
+                    <line x1="0" y1="1" x2="80" y2="1" stroke="white" strokeWidth="2" strokeDasharray="4 4" />
+                </svg>
             </div>
         </div>
     );

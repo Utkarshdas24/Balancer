@@ -309,7 +309,10 @@ export function useMatchGame() {
     // ── Cell Tap Logic ──────────────────────────────────────────────
     const handleCellTap = useCallback(
         (row, col) => {
-            if (state.isProcessing || state.gameStatus !== GAME_PHASES.PLAYING) return;
+            const isPlaying = state.gameStatus === GAME_PHASES.PLAYING;
+            const isTutorial = state.gameStatus === GAME_PHASES.TUTORIAL;
+
+            if (state.isProcessing || (!isPlaying && !isTutorial)) return;
 
             const { selectedCell, grid } = state;
 
@@ -343,6 +346,13 @@ export function useMatchGame() {
 
             // Valid Swap
             playSound('swap');
+
+            // If in Tutorial, complete it now
+            if (isTutorial) {
+                localStorage.setItem('bb_tutorial_completed', 'true');
+                dispatch({ type: A.COMPLETE_TUTORIAL });
+            }
+
             dispatch({ type: A.SET_PROCESSING, payload: true });
 
             const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
