@@ -36,7 +36,7 @@ const TutorialHand = () => {
                         opacity: [0, 1, 1, 0]
                     }}
                     transition={{
-                        duration: 1.8,
+                        duration: 1.2,
                         repeat: Infinity,
                         ease: "easeInOut",
                         repeatDelay: 0.2

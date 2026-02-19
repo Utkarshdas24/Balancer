@@ -175,6 +175,15 @@ export function useMatchGame() {
             }, 800);
             return () => clearTimeout(t);
         }
+
+        if (gameStatus === GAME_PHASES.TUTORIAL) {
+            // Auto-advance tutorial after 3 seconds
+            const t = setTimeout(() => {
+                localStorage.setItem('bb_tutorial_completed', 'true');
+                dispatch({ type: A.COMPLETE_TUTORIAL });
+            }, 3000);
+            return () => clearTimeout(t);
+        }
     }, [state.gameStatus]); // Depends ONLY on status to avoid reset loops
 
     // ── Cleanup ────────────────────────────────────────────────────────
