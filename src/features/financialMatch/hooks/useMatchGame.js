@@ -31,42 +31,31 @@ function nextFloatId() {
     return `f-${++floatId}`;
 }
 
-// ── Audio Pooling System (Memory Safety) ─────────────────────────────
-const AUDIO_POOL_SIZE = 2;
-const AUDIO_POOL = {
-    swap: [],
-    burst: [],
+// Preload Audio
+const audioCache = {
+    swap: new Audio(swapSoundUrl),
+    burst: new Audio(burstSoundUrl),
 };
 
-let audioInitialized = false;
+// Configure Audio
+Object.values(audioCache).forEach(audio => {
+    audio.volume = 0.6;
+    audio.preload = 'auto'; // ensure ready
+});
 
-function initAudio() {
-    if (audioInitialized) return;
-    audioInitialized = true;
-
-    for (let i = 0; i < AUDIO_POOL_SIZE; i++) {
-        const s1 = new Audio(swapSoundUrl);
-        s1.volume = 0.6;
-        s1.preload = 'auto';
-        AUDIO_POOL.swap.push(s1);
-
-        const s2 = new Audio(burstSoundUrl);
-        s2.volume = 0.6;
-        s2.preload = 'auto';
-        AUDIO_POOL.burst.push(s2);
-    }
-}
-
+// Helper to play sound (clones to allow overlapping)
 const playSound = (type) => {
-    if (!audioInitialized) initAudio();
-    const pool = AUDIO_POOL[type];
-    if (pool && pool.length > 0) {
-        // Find a free channel or takeover the first one
-        const sound = pool.find((s) => s.paused) || pool[0];
-        sound.currentTime = 0;
-        sound.play().catch(() => { });
+    if (type === 'swap' || type === 'burst') {
+        const sound = audioCache[type];
+        if (sound) {
+            const clone = sound.cloneNode();
+            clone.volume = 0.6;
+            clone.play().catch(() => { });
+        }
     }
 };
+
+
 
 export function useMatchGame() {
     const [state, dispatch] = useReducer(gameReducer, initialState);
@@ -225,7 +214,6 @@ export function useMatchGame() {
     }, []);
 
     const startGame = useCallback(() => {
-        initAudio(); // Lazy load audio
         const hasSeenTutorial = localStorage.getItem('bb_tutorial_completed');
         if (hasSeenTutorial === 'true') {
             dispatch({ type: A.START_GAME });
@@ -266,81 +254,63 @@ export function useMatchGame() {
         }, 800);
     }, []);
 
-    // ── Batched Cascade Resolution (Performance Optimized) ──────────
+    // ── Chain Resolution (Async) ────────────────────────────────────
     const resolveChain = useCallback(
-        async (startGrid) => {
-            let currentGrid = startGrid;
-            const steps = [];
+        async (swappedGrid) => {
+            let currentGrid = swappedGrid;
+            let chainStep = 0;
+            let totalPointsThisChain = 0;
 
-            // 1. Calculate Entire Cascade Sequence In-Memory
             while (true) {
                 const matchedKeys = findMatches(currentGrid);
                 if (matchedKeys.size === 0) break;
 
+                chainStep++;
+                const matchLen = matchedKeys.size;
                 const matchedTypes = [...getMatchedTypes(currentGrid, matchedKeys)];
 
-                // Logic: Remove -> Gravity -> Refill
-                const removed = removeMatches(currentGrid, matchedKeys);
-                const gravitated = applyGravity(removed);
-                const nextGrid = refillGrid(gravitated, TILE_TYPES, 0);
-
-                steps.push({
-                    grid: nextGrid, // The resulting grid for this step
-                    matchedTypes,
-                    matchLen: matchedKeys.size,
-                    explodingCells: matchedKeys
-                });
-
-                currentGrid = nextGrid;
-            }
-
-            // 2. Dispatch Each Step with Visual Delay
-            if (steps.length === 0) {
-                dispatch({ type: A.SET_PROCESSING, payload: false });
-                return;
-            }
-
-            let chainStep = 0;
-            for (const step of steps) {
-                chainStep++;
-                playSound('burst');
-
-                // Visual Extras (Floaters)
-                const { matchedTypes, matchLen } = step;
+                // Points
                 let pts = SCORING.match3;
                 if (matchLen >= 5) pts = SCORING.match5;
                 else if (matchLen >= 4) pts = SCORING.match4;
                 const bonus = (chainStep > 1 ? SCORING.comboBonus : 0) + (chainStep > 2 ? SCORING.cascadeBonus : 0);
-                const total = pts + bonus;
+                totalPointsThisChain += pts + bonus;
 
-                addFloat(`+${total}`, matchedTypes[0]);
+                // Visuals & Sound
+                playSound('burst');
 
-                // Dispatch "RESOLVE_CASCADE"
+                // Update State (Explode)
                 dispatch({
-                    type: A.RESOLVE_CASCADE,
+                    type: A.APPLY_MATCH,
                     payload: {
-                        grid: step.grid,
-                        matchedTypes: step.matchedTypes,
-                        matchLen: step.matchLen,
+                        matchedTypes,
+                        matchLen,
                         comboStep: chainStep,
-                        // Note: explodingCells is used internally by reducer for logic if needed, 
-                        // but currently RESOLVE_CASCADE just moves to next grid.
-                        // If we want to animate explosion, we might need to verify logic.
-                        // Assuming new grid + waiting is enough based on request.
-                    }
+                        explodingCells: [...matchedKeys],
+                        newGrid: currentGrid,
+                    },
                 });
 
-                // Visual Lag (Wait for user to see update)
+                // Float UI
+                addFloat(`+${pts + bonus}`, matchedTypes[0]);
+
+                // Logic: Remove -> Gravity -> Refill
+                const removed = removeMatches(currentGrid, matchedKeys);
+                const gravitated = applyGravity(removed);
+                currentGrid = refillGrid(gravitated, TILE_TYPES, 0);
+
                 await new Promise((res) => setTimeout(res, 450));
             }
 
-            // Praise Logic
-            if (chainStep >= 2) {
+            // Final Grid Set
+            dispatch({ type: A.SET_GRID, payload: currentGrid });
+            dispatch({ type: A.CLEAR_EXPLOSIONS });
+
+            // Praise Logic: Strictly after cascade settles
+            if (chainStep >= 2 || totalPointsThisChain >= 25) {
                 await new Promise((res) => setTimeout(res, 100));
                 showPraise();
             }
-
-            dispatch({ type: A.SET_PROCESSING, payload: false });
         },
         [addFloat, showPraise]
     );
@@ -348,7 +318,6 @@ export function useMatchGame() {
     // ── Cell Tap Logic ──────────────────────────────────────────────
     const handleCellTap = useCallback(
         (row, col) => {
-            initAudio();
             const isPlaying = state.gameStatus === GAME_PHASES.PLAYING;
             const isTutorial = state.gameStatus === GAME_PHASES.TUTORIAL;
 
@@ -403,13 +372,12 @@ export function useMatchGame() {
 
             resolveChain(newGrid);
         },
-        [state.isProcessing, state.gameStatus, state.selectedCell, state.grid, resolveChain]
+        [state.isProcessing, state.gameStatus, state.selectedCell, state.grid] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
     // ── Drag Swap Logic (New) ───────────────────────────────────────
     const handleDragSwap = useCallback(
         (r1, c1, r2, c2) => {
-            initAudio();
             const isPlaying = state.gameStatus === GAME_PHASES.PLAYING;
             const isTutorial = state.gameStatus === GAME_PHASES.TUTORIAL;
 
@@ -423,6 +391,9 @@ export function useMatchGame() {
             const isValid = wouldCreateMatch(grid, r1, c1, r2, c2);
 
             if (!isValid) {
+                // Determine if we should show invalid feedback? 
+                // For drag, maybe just animate back. 
+                // But the game logic expects an action.
                 dispatch({ type: A.APPLY_INVALID_SWAP });
                 return;
             }
@@ -437,7 +408,7 @@ export function useMatchGame() {
             }
 
             dispatch({ type: A.SET_PROCESSING, payload: true });
-            dispatch({ type: A.DESELECT });
+            dispatch({ type: A.DESELECT }); // Clear any existing selection
 
             const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
             const a = { ...newGrid[r1][c1] };
@@ -449,6 +420,8 @@ export function useMatchGame() {
         },
         [state.isProcessing, state.gameStatus, state.grid, resolveChain]
     );
+
+
 
     // Public Actions
     const exitGame = useCallback(() => {

@@ -14,10 +14,6 @@ import {
 } from '../config/gameConfig.js';
 import { createMatchEngine } from '../../../core/matchEngine/index.js';
 
-// ── Constants for Memory Safety ─────────────────────────────────────────
-const EMPTY_SET = new Set();
-const EMPTY_ARRAY = [];
-
 // ── Action Types ────────────────────────────────────────────────────────
 
 export const A = {
@@ -36,14 +32,14 @@ export const A = {
     SELECT_CELL: 'SELECT_CELL',
     DESELECT: 'DESELECT',
     SET_PROCESSING: 'SET_PROCESSING',
-    // Consolidated Action
-    RESOLVE_CASCADE: 'RESOLVE_CASCADE',
-
+    APPLY_MATCH: 'APPLY_MATCH',
     APPLY_INVALID_SWAP: 'APPLY_INVALID_SWAP',
+    SET_GRID: 'SET_GRID',
+    CLEAR_EXPLOSIONS: 'CLEAR_EXPLOSIONS',
 
-    // UI Helpers
     ADD_FLOAT: 'ADD_FLOAT',
     REMOVE_FLOAT: 'REMOVE_FLOAT',
+
     SHOW_PRAISE: 'SHOW_PRAISE',
     HIDE_PRAISE: 'HIDE_PRAISE',
 };
@@ -58,8 +54,8 @@ export const initialState = {
 
     grid: null,
     selectedCell: null,
-    explodingCells: EMPTY_SET,
-    floatingScores: EMPTY_ARRAY,
+    explodingCells: new Set(),
+    floatingScores: [],
     isProcessing: false,
 
     buckets: {
@@ -114,8 +110,8 @@ export function gameReducer(state, action) {
                 maxCombo: 0,
                 activeCombo: 0,
                 selectedCell: null,
-                explodingCells: EMPTY_SET,
-                floatingScores: EMPTY_ARRAY,
+                explodingCells: new Set(),
+                floatingScores: [],
                 activePraise: null,
                 isProcessing: false,
                 gameStatus: GAME_PHASES.PLAYING,
@@ -187,15 +183,16 @@ export function gameReducer(state, action) {
         case A.SET_PROCESSING:
             return { ...state, isProcessing: action.payload };
 
-        case A.RESOLVE_CASCADE: {
+        case A.APPLY_MATCH: {
             const {
-                grid,
                 matchedTypes,
                 matchLen,
                 comboStep,
+                explodingCells,
+                newGrid,
             } = action.payload;
 
-            /* Calculate bucket points */
+            /* Calculate bucket points per matched type */
             let bucketPoints = SCORING.match3;
             if (matchLen >= 5) bucketPoints = SCORING.match5;
             else if (matchLen >= 4) bucketPoints = SCORING.match4;
@@ -211,14 +208,13 @@ export function gameReducer(state, action) {
 
             return {
                 ...state,
-                grid,
+                grid: newGrid,
                 buckets: newBuckets,
                 totalMatches: state.totalMatches + 1,
                 activeCombo: comboStep,
                 maxCombo: Math.max(state.maxCombo, comboStep),
+                explodingCells: new Set(explodingCells),
                 selectedCell: null,
-                // Reset explosions since we moved to next step
-                explodingCells: EMPTY_SET,
             };
         }
 
@@ -228,6 +224,12 @@ export function gameReducer(state, action) {
                 selectedCell: null,
                 isProcessing: false,
             };
+
+        case A.SET_GRID:
+            return { ...state, grid: action.payload };
+
+        case A.CLEAR_EXPLOSIONS:
+            return { ...state, explodingCells: new Set(), isProcessing: false };
 
         case A.ADD_FLOAT:
             return { ...state, floatingScores: [...state.floatingScores, action.payload] };

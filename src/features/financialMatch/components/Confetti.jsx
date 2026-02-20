@@ -19,8 +19,7 @@ const Confetti = () => {
         canvas.height = height;
 
         const pieces = [];
-        const isLowEnd = typeof navigator !== 'undefined' && navigator.hardwareConcurrency <= 4;
-        const numberOfPieces = isLowEnd ? 30 : 60;
+        const numberOfPieces = 150;
         const colors = ['#0066B2', '#FF8C00', '#ffffff', '#FFD700', '#00A3E0'];
 
         class ConfettiPiece {
@@ -60,25 +59,16 @@ const Confetti = () => {
         }
 
         let animationId;
-        let lastTime = 0;
-        const fpsInterval = 1000 / 30; // Cap at 30fps for battery/perf
-
-        const animate = (time) => {
+        const animate = () => {
+            ctx.clearRect(0, 0, width, height);
+            pieces.forEach((p) => {
+                p.update();
+                p.draw();
+            });
             animationId = requestAnimationFrame(animate);
-
-            const elapsed = time - lastTime;
-            if (elapsed > fpsInterval) {
-                lastTime = time - (elapsed % fpsInterval);
-
-                ctx.clearRect(0, 0, width, height);
-                pieces.forEach((p) => {
-                    p.update();
-                    p.draw();
-                });
-            }
         };
 
-        animate(0);
+        animate();
 
         const timer = setTimeout(() => {
             cancelAnimationFrame(animationId);

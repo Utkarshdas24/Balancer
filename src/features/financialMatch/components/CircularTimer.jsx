@@ -4,6 +4,7 @@
  */
 import { memo } from 'react';
 import PropTypes from 'prop-types';
+import { motion } from 'framer-motion';
 
 const RADIUS = 24;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -36,8 +37,8 @@ const CircularTimer = memo(function CircularTimer({ timeLeft, totalTime }) {
                     stroke="rgba(255,255,255,0.1)"
                     strokeWidth="3"
                 />
-                {/* Progress (CSS Transition) */}
-                <circle
+                {/* Progress */}
+                <motion.circle
                     cx="30"
                     cy="30"
                     r={RADIUS}
@@ -46,11 +47,10 @@ const CircularTimer = memo(function CircularTimer({ timeLeft, totalTime }) {
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeDasharray={CIRCUMFERENCE}
-                    strokeDashoffset={offset}
-                    style={{
-                        transition: 'stroke-dashoffset 1s linear',
-                        filter: `drop-shadow(0 0 4px ${strokeColor})`
-                    }}
+                    initial={{ strokeDashoffset: 0 }}
+                    animate={{ strokeDashoffset: offset }}
+                    transition={{ duration: 1, ease: "linear" }}
+                    style={{ filter: `drop-shadow(0 0 4px ${strokeColor})` }}
                 />
             </svg>
 

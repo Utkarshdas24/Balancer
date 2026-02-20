@@ -5,6 +5,7 @@ import { memo, useCallback, useRef, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { GRID_SIZE } from '../../../core/matchEngine/index.js';
 import GameTile from './GameTile.jsx';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const GameGrid = memo(function GameGrid({
     grid,
@@ -18,28 +19,19 @@ const GameGrid = memo(function GameGrid({
     const containerRef = useRef(null);
     const [cellSize, setCellSize] = useState(48);
 
-    // Responsive Cell Sizing - Throttled
+    // Responsive Cell Sizing
     useEffect(() => {
         if (!containerRef.current) return;
-
-        let frameId;
         const observer = new ResizeObserver((entries) => {
-            if (frameId) cancelAnimationFrame(frameId);
-            frameId = requestAnimationFrame(() => {
-                const width = entries[0].contentRect.width;
-                // Subtract padding (16px total) and gap (3px * 5)
-                const availableW = width - 24;
-                const maxByWidth = Math.floor(availableW / GRID_SIZE);
-                // Clamp size (Mobile small -> Desktop large)
-                setCellSize(Math.max(42, Math.min(64, maxByWidth)));
-            });
+            const width = entries[0].contentRect.width;
+            // Subtract padding (16px total) and gap (3px * 5)
+            const availableW = width - 24;
+            const maxByWidth = Math.floor(availableW / GRID_SIZE);
+            // Clamp size (Mobile small -> Desktop large)
+            setCellSize(Math.max(42, Math.min(64, maxByWidth)));
         });
-
         observer.observe(containerRef.current);
-        return () => {
-            observer.disconnect();
-            if (frameId) cancelAnimationFrame(frameId);
-        };
+        return () => observer.disconnect();
     }, []);
 
     const handleTap = useCallback(
@@ -98,14 +90,12 @@ const GameGrid = memo(function GameGrid({
                         padding: '2px', // Inner padding
                     }}
                 >
-                    {grid.map((row, rI) =>
-                        row.map((tile, cI) => {
-                            // Stable Keys for empty cells
+                    {grid.map((row) =>
+                        row.map((tile) => {
                             if (!tile)
-                                return <div key={`empty-${rI}-${cI}`} style={{ width: cellSize, height: cellSize }} />;
+                                return <div key={Math.random()} style={{ width: cellSize, height: cellSize }} />;
 
                             const isSelected = selectedCell?.row === tile.row && selectedCell?.col === tile.col;
-                            // Check via ID or coords? Using Set of coords "r-c" from reducer
                             const isExploding = explodingCells.has(`${tile.row}-${tile.col}`);
 
                             return (
@@ -124,51 +114,59 @@ const GameGrid = memo(function GameGrid({
                 </div>
 
                 {/* Floating Scores Overlay */}
-                {floatingScores.map((fs) => (
-                    <div
-                        key={fs.id}
-                        className="float-point absolute pointer-events-none z-50 text-center w-full animate-float-up"
-                        style={{
-                            left: 0,
-                            // Vertical positioning roughly centered or randomized in reducer
-                            // We use transform from CSS, but start position needs to be set if x/y provided
-                            // If x/y are %:
-                            top: `${fs.y}%`,
-                            transform: `translateX(${fs.x - 50}px)`,
-                            // Note: CSS animation 'float-up' overrides transform!
-                            // Issue: fs.x is set in reducer. If keyframe uses translate3d(0,0,0), it resets X.
-                            // Fix: Apply X via specific style wrapper or change keyframe. 
-                            // Keyframe float-up moves Y. We can apply X on parent.
-                        }}
-                    >
-                        <div style={{ transform: `translateX(${fs.x - 50}px)` }}>
+                <AnimatePresence>
+                    {floatingScores.map((fs) => (
+                        <motion.div
+                            key={fs.id}
+                            initial={{ opacity: 0, y: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, y: -40, scale: 1.2 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.8, ease: 'easeOut' }}
+                            className="float-point absolute pointer-events-none z-50 text-center w-full"
+                            style={{
+                                left: 0,
+                                top: `${fs.y}%`, // Use % relative to board? Or absolute px?
+                                // Actually, positioning floating scores relative to the CELL is hard without layout calculation.
+                                // Let's use simple centralized feedback or random position near center if precise cell xy is hard.
+                                // Or better: pass the screen-space coordinates?
+                                // For simplicity in React, passing 'x/y %' relative to board center is easiest if we don't track refs per cell.
+                                // The current implementation uses random x/y. Let's stick to that but constrain it better.
+                                transform: `translateX(${fs.x - 50}px)`, // Offset from center
+                            }}
+                        >
                             <span className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-bb-gold">
                                 {fs.value}
                             </span>
-                        </div>
-                    </div>
-                ))}
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
 
                 {/* Praise Overlay (Centered) */}
-                {activePraise && (
-                    <div
-                        key={activePraise}
-                        className="absolute inset-0 flex items-center justify-center pointer-events-none z-[100] animate-praise-in"
-                    >
-                        <div className="bg-black/40 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20 shadow-2xl">
-                            <span
-                                className="font-game text-3xl sm:text-4xl text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] tracking-wide"
-                            >
-                                {activePraise}
-                            </span>
-                        </div>
+                <AnimatePresence>
+                    {activePraise && (
+                        <motion.div
+                            key={activePraise}
+                            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+                            animate={{ opacity: 1, scale: 1.2, y: 0 }}
+                            exit={{ opacity: 0, scale: 1.5, y: -20 }}
+                            transition={{ duration: 0.4, type: 'spring', bounce: 0.5 }}
+                            className="absolute inset-0 flex items-center justify-center pointer-events-none z-[100]"
+                        >
+                            <div className="bg-black/40 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20 shadow-2xl">
+                                <span
+                                    className="font-game text-3xl sm:text-4xl text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] tracking-wide"
+                                >
+                                    {activePraise}
+                                </span>
+                            </div>
 
-                        {/* Sparkles (CSS Rotate) */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-40 h-40 border-2 border-dashed border-white/10 rounded-full animate-[spin_4s_linear_infinite]" />
-                        </div>
-                    </div>
-                )}
+                            {/* Sparkles */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity }} className="w-40 h-40 border-2 border-dashed border-white/10 rounded-full" />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
             </div>
         </div>
@@ -186,4 +184,3 @@ GameGrid.propTypes = {
 };
 
 export default GameGrid;
-
