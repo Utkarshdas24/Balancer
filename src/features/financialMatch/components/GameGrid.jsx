@@ -89,20 +89,33 @@ const GameGrid = memo(function GameGrid({
 
                 <div
                     style={{
-                        display: 'grid',
-                        gridTemplateColumns: `repeat(${GRID_SIZE}, ${cellSize}px)`,
-                        gridTemplateRows: `repeat(${GRID_SIZE}, ${cellSize}px)`,
-                        gap: '4px',
                         position: 'relative',
+                        width: GRID_SIZE * cellSize,
+                        height: GRID_SIZE * cellSize,
                         zIndex: 1,
                         padding: '2px', // Inner padding
                     }}
                 >
                     {grid.map((row, rI) =>
                         row.map((tile, cI) => {
+                            const x = cI * cellSize;
+                            const y = rI * cellSize;
+
                             // Stable Keys for empty cells
                             if (!tile)
-                                return <div key={`empty-${rI}-${cI}`} style={{ width: cellSize, height: cellSize }} />;
+                                return (
+                                    <div
+                                        key={`empty-${rI}-${cI}`}
+                                        style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 0,
+                                            width: cellSize,
+                                            height: cellSize,
+                                            transform: `translate3d(${x}px, ${y}px, 0)`
+                                        }}
+                                    />
+                                );
 
                             const isSelected = selectedCell?.row === tile.row && selectedCell?.col === tile.col;
                             // Check via ID or coords? Using Set of coords "r-c" from reducer
@@ -112,6 +125,8 @@ const GameGrid = memo(function GameGrid({
                                 <GameTile
                                     key={tile.id}
                                     tile={tile}
+                                    x={x}
+                                    y={y}
                                     isSelected={isSelected}
                                     isExploding={isExploding}
                                     onTap={handleTap}

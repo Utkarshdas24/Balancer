@@ -49,6 +49,8 @@ const TileIcon = ({ type }) => {
 
 const GameTile = memo(function GameTile({
     tile,
+    x,
+    y,
     isSelected,
     isExploding,
     onTap,
@@ -58,21 +60,20 @@ const GameTile = memo(function GameTile({
     // Native Swipe Detection
     const touchStartRef = useRef(null);
 
+    // Fallback if x/y missing (though GameGrid should provide them)
+    const posX = x !== undefined ? x : (tile?.col || 0) * cellSize;
+    const posY = y !== undefined ? y : (tile?.row || 0) * cellSize;
+
     if (!tile || !tile.type) return <div style={{ width: cellSize, height: cellSize }} />;
 
     const style = TILE_STYLES[tile.type] || TILE_STYLES.GREEN;
 
     // CSS-based State Classes
     const isSelectedClass = isSelected ? 'scale-95 ring-[3px] ring-white/80 ring-offset-2 ring-offset-bb-navy z-20 brightness-110' : '';
-    // Use animate-tile-pop defined in global CSS or Tailwind config if available.
-    // If not, use standard transition transform.
-    // Assuming 'animate-tile-pop' keyframe exists or we use inline style.
-    // For "Removing Framer Motion", we rely on CSS transitions defined in index.css (.tile-premium transition)
-    const animStyle = isExploding ? { transform: 'scale3d(1.5, 1.5, 1)', opacity: 0 } : {};
 
     const handlePointerDown = (e) => {
         touchStartRef.current = { x: e.clientX, y: e.clientY };
-        // e.target.setPointerCapture(e.pointerId); // Optional, might block scrolling
+        // e.target.setPointerCapture(e.pointerId); // Optional
     };
 
     const handlePointerUp = (e) => {
@@ -98,29 +99,40 @@ const GameTile = memo(function GameTile({
         }
     };
 
+    // Outer wrapper handles positioning & moving (sliding)
+    // Inner div handles scale/pop effects
     return (
         <div
-            className={`relative flex items-center justify-center 
-        ${style.bg} ${style.shadow} ${isSelectedClass} 
-        tile-premium select-none touch-action-none`}
+            className="absolute top-0 left-0 transition-transform duration-300 ease-out will-change-transform"
             style={{
                 width: cellSize,
                 height: cellSize,
-                ...animStyle
+                transform: `translate3d(${posX}px, ${posY}px, 0)`,
+                zIndex: isSelected ? 30 : 10,
             }}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={() => { touchStartRef.current = null; }}
         >
-            {/* Icon content */}
-            <TileIcon type={tile.type} />
+            <div
+                className={`relative w-full h-full flex items-center justify-center 
+                ${style.bg} ${style.shadow} ${isSelectedClass} 
+                tile-premium select-none touch-action-none transition-all duration-200`}
+                style={{
+                    transform: isExploding ? 'scale3d(1.5, 1.5, 1)' : 'scale3d(1, 1, 1)',
+                    opacity: isExploding ? 0 : 1,
+                }}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={() => { touchStartRef.current = null; }}
+            >
+                {/* Icon content */}
+                <TileIcon type={tile.type} />
 
-            {/* Selection Glow Overlay */}
-            {isSelected && (
-                <div
-                    className="absolute inset-0 rounded-[14px] bg-white/20 animate-pulse"
-                />
-            )}
+                {/* Selection Glow Overlay */}
+                {isSelected && (
+                    <div
+                        className="absolute inset-0 rounded-[14px] bg-white/20 animate-pulse"
+                    />
+                )}
+            </div>
         </div>
     );
 }, (prev, next) => {
@@ -128,6 +140,8 @@ const GameTile = memo(function GameTile({
     return (
         prev.tile.id === next.tile.id &&
         prev.tile.type === next.tile.type &&
+        prev.x === next.x &&
+        prev.y === next.y &&
         prev.isSelected === next.isSelected &&
         prev.isExploding === next.isExploding &&
         prev.cellSize === next.cellSize
@@ -136,6 +150,8 @@ const GameTile = memo(function GameTile({
 
 GameTile.propTypes = {
     tile: PropTypes.object,
+    x: PropTypes.number,
+    y: PropTypes.number,
     isSelected: PropTypes.bool,
     isExploding: PropTypes.bool,
     onTap: PropTypes.func.isRequired,
@@ -144,4 +160,3 @@ GameTile.propTypes = {
 };
 
 export default GameTile;
-
