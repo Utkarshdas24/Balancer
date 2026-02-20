@@ -2,9 +2,8 @@
  * GameTile — Premium 14px rounded block with gloss, inner glow, and 3D depth.
  * "Tactile Fintech Gem" style.
  */
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { motion, AnimatePresence } from 'framer-motion';
 
 // Tile Metadata with Tailwind gradients
 const TILE_STYLES = {
@@ -15,8 +14,6 @@ const TILE_STYLES = {
 };
 
 // Simple Icon Placeholders (Use Lucide, or keep minimal shapes)
-// For max performance & cleanliness, let's use minimal SVG shapes.
-
 const TileIcon = ({ type }) => {
     const stroke = "rgba(255,255,255,0.9)";
     const fill = "rgba(255,255,255,0.15)";
@@ -58,52 +55,82 @@ const GameTile = memo(function GameTile({
     onSwipe,
     cellSize
 }) {
+    // Native Swipe Detection
+    const touchStartRef = useRef(null);
+
     if (!tile || !tile.type) return <div style={{ width: cellSize, height: cellSize }} />;
 
     const style = TILE_STYLES[tile.type] || TILE_STYLES.GREEN;
+
+    // CSS-based State Classes
     const isSelectedClass = isSelected ? 'scale-95 ring-[3px] ring-white/80 ring-offset-2 ring-offset-bb-navy z-20 brightness-110' : '';
-    const animClass = isExploding ? 'animate-tile-pop opacity-0' : '';
+    // Use animate-tile-pop defined in global CSS or Tailwind config if available.
+    // If not, use standard transition transform.
+    // Assuming 'animate-tile-pop' keyframe exists or we use inline style.
+    // For "Removing Framer Motion", we rely on CSS transitions defined in index.css (.tile-premium transition)
+    const animStyle = isExploding ? { transform: 'scale3d(1.5, 1.5, 1)', opacity: 0 } : {};
+
+    const handlePointerDown = (e) => {
+        touchStartRef.current = { x: e.clientX, y: e.clientY };
+        // e.target.setPointerCapture(e.pointerId); // Optional, might block scrolling
+    };
+
+    const handlePointerUp = (e) => {
+        if (!touchStartRef.current) return;
+        const dx = e.clientX - touchStartRef.current.x;
+        const dy = e.clientY - touchStartRef.current.y;
+        touchStartRef.current = null;
+
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+        const threshold = 30; // px
+
+        if (Math.max(absX, absY) < threshold) {
+            // Tap
+            onTap(tile.row, tile.col);
+        } else {
+            // Swipe
+            if (absX > absY) {
+                onSwipe(tile.row, tile.col, dx > 0 ? 'RIGHT' : 'LEFT');
+            } else {
+                onSwipe(tile.row, tile.col, dy > 0 ? 'DOWN' : 'UP');
+            }
+        }
+    };
 
     return (
-        <motion.div
-            layoutId={tile.id}
+        <div
             className={`relative flex items-center justify-center 
-        ${style.bg} ${style.shadow} ${isSelectedClass} ${animClass} 
-        tile-premium select-none touch-action-none`} // touch-action-none important for gestures
+        ${style.bg} ${style.shadow} ${isSelectedClass} 
+        tile-premium select-none touch-action-none`}
             style={{
                 width: cellSize,
                 height: cellSize,
+                ...animStyle
             }}
-            onClick={() => onTap(tile.row, tile.col)}
-            onPanEnd={(e, info) => {
-                const { x, y } = info.offset;
-                const threshold = 20; // px
-                if (Math.abs(x) > Math.abs(y)) {
-                    if (Math.abs(x) > threshold) {
-                        onSwipe(tile.row, tile.col, x > 0 ? 'RIGHT' : 'LEFT');
-                    }
-                } else {
-                    if (Math.abs(y) > threshold) {
-                        onSwipe(tile.row, tile.col, y > 0 ? 'DOWN' : 'UP');
-                    }
-                }
-            }}
-            initial={false}
-            animate={{ scale: isExploding ? 1.5 : 1, opacity: isExploding ? 0 : 1 }}
-            whileTap={{ scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={() => { touchStartRef.current = null; }}
         >
             {/* Icon content */}
             <TileIcon type={tile.type} />
 
             {/* Selection Glow Overlay */}
             {isSelected && (
-                <motion.div
-                    layoutId="select-glow"
+                <div
                     className="absolute inset-0 rounded-[14px] bg-white/20 animate-pulse"
                 />
             )}
-        </motion.div>
+        </div>
+    );
+}, (prev, next) => {
+    // Custom Memo Comparison
+    return (
+        prev.tile.id === next.tile.id &&
+        prev.tile.type === next.tile.type &&
+        prev.isSelected === next.isSelected &&
+        prev.isExploding === next.isExploding &&
+        prev.cellSize === next.cellSize
     );
 });
 
@@ -117,3 +144,4 @@ GameTile.propTypes = {
 };
 
 export default GameTile;
+

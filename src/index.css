@@ -32,33 +32,48 @@ body,
 /* ── Glass Morphism Premium ────────────────────────────────── */
 .glass-panel {
     background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    /* Faint white border */
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
     border-radius: 1rem;
 }
 
+/* Conditional Blurs for Performance */
+@media (min-width: 768px) {
+    .glass-panel {
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+}
+
 .glass-header {
-    background: rgba(8, 28, 58, 0.6);
-    backdrop-filter: blur(12px);
+    background: rgba(8, 28, 58, 0.85);
+    /* Slightly more opaque for mobile */
     border-bottom: 1px solid rgba(59, 130, 246, 0.15);
-    /* Electric Blue faint */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+@media (min-width: 768px) {
+    .glass-header {
+        background: rgba(8, 28, 58, 0.6);
+        backdrop-filter: blur(12px);
+    }
 }
 
 /* ── Bucket Glass Capsule ──────────────────────────────────── */
 .bucket-capsule {
     background: rgba(6, 14, 36, 0.5);
-    backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 9999px;
-    /* full pill */
     overflow: hidden;
     position: relative;
     transition: all 0.3s ease;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+    .bucket-capsule {
+        backdrop-filter: blur(8px);
+    }
 }
 
 .bucket-capsule.full {
@@ -71,12 +86,16 @@ body,
     border-radius: 14px;
     position: relative;
     cursor: pointer;
-    /* Framer Motion handles transition */
-    will-change: transform;
+    background-size: cover;
+    /* Performance Optimization: Containment */
+    contain: layout style paint;
     box-shadow:
         0 4px 6px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     overflow: hidden;
+    /* Hardware Acceleration for transforms */
+    transform: translate3d(0, 0, 0);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
 }
 
 .tile-premium::after {
@@ -92,6 +111,79 @@ body,
     pointer-events: none;
 }
 
+/* ── Animations (CSS Native) ────────────────────────────────── */
+
+@keyframes float-up {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0) scale(0.5);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translate3d(0, -20px, 0) scale(1.2);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate3d(0, -60px, 0) scale(1);
+    }
+}
+
+@keyframes praise-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.5) translateY(20px);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.2) translateY(0);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes particle-rise {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-100px) scale(0.5);
+        opacity: 0;
+    }
+}
+
+@keyframes wave {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(50%);
+    }
+}
+
+.animate-float-up {
+    animation: float-up 0.8s ease-out forwards;
+}
+
+.animate-praise-in {
+    animation: praise-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-wave {
+    animation: wave 2s linear infinite;
+}
 
 /* ── Floating Points ────────────────────────────────────────── */
 .float-point {
@@ -102,7 +194,8 @@ body,
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 255, 255, 0.5);
     pointer-events: none;
     z-index: 50;
-    animation: particle-rise 0.8s ease-out forwards;
+    /* Use keyframe instead of Framer Motion */
+    animation: float-up 0.8s ease-out forwards;
 }
 
 /* ── Cinematic Glow Background ──────────────────────────────── */

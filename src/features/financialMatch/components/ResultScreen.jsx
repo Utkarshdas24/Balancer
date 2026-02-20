@@ -138,7 +138,7 @@ const ResultScreen = ({
                             onClick={handleShare}
                             className="bg-gradient-to-r from-[#FF8C00] to-[#FF7000] hover:from-[#FF7000] hover:to-[#E65C00] text-white font-black py-3 px-10 shadow-[0_4px_0_#993D00] active:translate-y-1 active:shadow-none transition-all flex items-center gap-3 text-sm sm:text-base border-2 border-white/20 uppercase tracking-widest rounded-full"
                         >
-                            <Share2 className="w-5 h-5" /> SHARE SCORE
+                            <Share2 className="w-5 h-5" /> SHARE
                         </button>
                     </div>
                 </div>

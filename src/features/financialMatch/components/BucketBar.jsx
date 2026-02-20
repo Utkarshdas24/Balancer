@@ -4,7 +4,6 @@
  */
 import { memo } from 'react';
 import PropTypes from 'prop-types';
-import { motion, AnimatePresence } from 'framer-motion';
 import { TILE_META, BUCKET_MAX } from '../config/gameConfig.js';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -41,25 +40,30 @@ const BucketBar = memo(function BucketBar({ buckets }) {
                                 {/* Background Tint */}
                                 <div className="absolute inset-0 bg-white/5" />
 
-                                {/* Liquid Fill */}
-                                <motion.div
-                                    className="absolute bottom-0 left-0 right-0 z-0 overflow-hidden"
-                                    initial={{ height: '0%' }}
-                                    animate={{ height: `${pct}%` }}
-                                    transition={{ type: 'spring', stiffness: 50, damping: 15 }}
+                                {/* Liquid Fill (GPU Transform) */}
+                                <div
+                                    className="absolute inset-0 z-0 overflow-hidden transition-transform duration-500 ease-out"
+                                    style={{
+                                        transform: `scaleY(${pct / 100})`,
+                                        transformOrigin: 'bottom',
+                                    }}
                                 >
+                                    {/* Inner Color (Counter-scale if we wanted to preserve aspect, but here we just fill) */}
                                     <div
                                         className="absolute inset-0 opacity-80"
                                         style={{ background: meta.bucketBg }}
                                     />
-                                    {/* Wave Overlay */}
+                                    {/* Wave Overlay - Scaling with parent (acceptable trade-off for perf) */}
                                     <div
-                                        className="absolute top-[-10px] left-[-50%] w-[200%] h-6 opacity-40 animate-wave"
-                                        style={{ background: `linear-gradient(90deg, transparent, #fff, transparent)` }}
+                                        className="absolute top-0 left-[-50%] w-[200%] h-6 opacity-40 animate-wave"
+                                        style={{
+                                            background: `linear-gradient(90deg, transparent, #fff, transparent)`,
+                                            transform: `scaleY(${100 / pct || 1})` // Optional: Try to un-squash? No, keeps it simple.
+                                        }}
                                     />
                                     {/* Top Gloss Line */}
                                     <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/40" />
-                                </motion.div>
+                                </div>
 
                                 {/* Percentage Text (Always visible, high contrast) */}
                                 <div className="absolute bottom-2 inset-x-0 text-center z-10">
@@ -69,27 +73,19 @@ const BucketBar = memo(function BucketBar({ buckets }) {
                                 </div>
 
                                 {/* Secured Badge (Overlay when full) */}
-                                <AnimatePresence>
-                                    {isFull && (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                                            className="absolute top-[-8px] inset-x-0 flex justify-center z-20"
-                                        >
-                                            <div className="bg-bb-gold text-bb-navy text-[0.5rem] font-black uppercase px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 border border-white/20">
-                                                <CheckCircle2 className="w-2.5 h-2.5" />
-                                                Secured
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                <div
+                                    className={`absolute top-[-8px] inset-x-0 flex justify-center z-20 transition-all duration-300 ${isFull ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-50'}`}
+                                >
+                                    <div className="bg-bb-gold text-bb-navy text-[0.5rem] font-black uppercase px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 border border-white/20">
+                                        <CheckCircle2 className="w-2.5 h-2.5" />
+                                        Secured
+                                    </div>
+                                </div>
 
                                 {/* Full Pulse Effect */}
                                 {isFull && (
-                                    <motion.div
-                                        className="absolute inset-0 rounded-[inherit] border-2 border-bb-gold/50"
-                                        animate={{ opacity: [0, 1, 0], scale: [1, 1.05, 1] }}
-                                        transition={{ duration: 2, repeat: Infinity }}
+                                    <div
+                                        className="absolute inset-0 rounded-[inherit] border-2 border-bb-gold/50 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"
                                     />
                                 )}
                             </div>
